@@ -69,7 +69,10 @@ Not all PDFs yielded usable text from OCR, so TXT files (when available) represe
 
 ### 4. Metadata Extraction (getimagemetadata.py)
 
+## Notes & Limitations
 
+* A small number of PDFs cannot be processed—acceptable in a larger dataset context.
+* Similarity thresholds may need tuning for different document collections.
     
 
 
