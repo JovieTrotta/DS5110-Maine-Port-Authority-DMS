@@ -29,9 +29,37 @@ A few PDFs could not be processed due to corruption or unsupported structures.
 
 Overall, these failures stem from file issues rather than pipeline limitations, and the method should scale well to larger datasets.
 
-### 2. File Renaming (filename.py)
+### 2. Metadata Extraction (getimagemetadata.py)
 
-### 3. Document Organization (organizer2.py)
+We have three primary types of documents that we will be examining.
+
+1. .pdf
+
+    More information available here regarding the library: https://pypdf2.readthedocs.io/en/3.x/modules/DocumentInformation.html
+    
+    This code extracts the metadata available in a document's head.
+    
+    We can access the following attributes that are part of nearly every PDF file:
+    
+    ...File Author
+    ...File Creation Date
+    ...File Creator
+    ...File Modified Date
+    ...File Producer
+    ...File Subject
+    ...File Title
+
+2. .doc
+   
+    *** Look into the Document Python library.
+   
+3. .txt
+
+    Text files do not contain metadata.
+
+### 3. File Renaming (filename.py)
+
+### 4. Document Organization (organizer2.py)
 This script groups documents into meaningful clusters based on semantic similarity using Sentence Transformers.
 
 1. Loads document text
@@ -66,8 +94,6 @@ This script groups documents into meaningful clusters based on semantic similari
 
 #### Why TXT Files Are Used for PDFs: 
 Not all PDFs yielded usable text from OCR, so TXT files (when available) represent the “best possible” extracted text for grouping. DOCX files use their native text. 
-
-### 4. Metadata Extraction (getimagemetadata.py)
 
 ## Notes & Limitations
 
