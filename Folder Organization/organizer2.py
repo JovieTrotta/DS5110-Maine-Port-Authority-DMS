@@ -9,10 +9,10 @@ from sentence_transformers import SentenceTransformer, util
 # --------------------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------------------
-TEXT_DIR = "ocr_text_output"
-PDF_DIR = "pdf_files"
-DOCX_DIR = "docx_files"
-OUTPUT_DIR = "organized_folders_final"
+TEXT_DIR = "ocr_text_output_2"
+PDF_DIR = "pdf_files_up"
+DOCX_DIR = "docx_files_up"
+OUTPUT_DIR = "organized_folders_final_up"
 
 INITIAL_PAIR_THRESHOLD = 0.8   # similarity needed to form a pair
 ASSIGN_THRESHOLD = 0.2        # similarity needed to join an existing group
@@ -172,22 +172,36 @@ while remaining:
 
 print(f"\nFinal number of groups: {len(groups)}")
 
-
 # --------------------------------------------------------------
-# GROUP NAME = keyword + (optional) first detected year
+# GROUP NAME FROM FILENAMES
 # --------------------------------------------------------------
-def generate_group_name(texts):
-    all_words = " ".join(texts).split()
-    long_words = [w for w in all_words if len(w) > 5]
+import re
+from collections import Counter
 
-    from collections import Counter
-    keyword = Counter(long_words).most_common(1)[0][0].capitalize() if long_words else "Group"
+def generate_group_name(filenames):
+    # filenames is a list of file names, e.g. ["Americold Training 2021.pdf", ...]
 
-    years = re.findall(r"\b(19|20)\d{2}\b", " ".join(texts))
+    # Join all filenames and split into words
+    all_words = []
+    for name in filenames:
+        words = re.split(r"[^A-Za-z0-9]+", name)
+        all_words.extend(words)
+
+    # Filter out short or meaningless words
+    meaningful = [w.lower() for w in all_words if len(w) > 3]
+
+    # Pick most common meaningful word
+    keyword = Counter(meaningful).most_common(1)
+    keyword = keyword[0][0].capitalize() if keyword else "Group"
+
+    # Detect year from file names
+    years = re.findall(r"\b(19|20)\d{2}\b", " ".join(filenames))
     year = "_" + years[0] if years else ""
 
+    # Build clean folder name
     name = f"{keyword}{year}"
-    name = re.sub(r"[^A-Za-z0-9_\-]", "_", name)  # sanitize
+    name = re.sub(r"[^A-Za-z0-9_\-]", "_", name)
+
     return name
 
 
@@ -197,22 +211,32 @@ def generate_group_name(texts):
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 for g_id, group in enumerate(groups, start=1):
-    group_texts = [documents[i] for i in group]
-    folder_name = generate_group_name(group_texts)
+
+    # Collect *filenames* for naming
+    group_filenames = []
+    for idx in group:
+        entry = meta[idx]
+        base = entry["base"]
+        ext = ".pdf" if entry["kind"] == "pdf" else ".docx"
+        group_filenames.append(base + ext)
+
+    # Create group folder name from filenames
+    folder_name = generate_group_name(group_filenames)
     folder_path = os.path.join(OUTPUT_DIR, folder_name)
 
     os.makedirs(folder_path, exist_ok=True)
     print(f"\n Group {g_id}: '{folder_name}' ({len(group)} files)")
 
+    # Copy each file into the new folder
     for idx in group:
         entry = meta[idx]
         base = entry["base"]
         kind = entry["kind"]
 
-        if kind == "pdf":
-            src = os.path.join(PDF_DIR, base + ".pdf")
-        else:
-            src = os.path.join(DOCX_DIR, base + ".docx")
+        src = os.path.join(
+            PDF_DIR if kind == "pdf" else DOCX_DIR,
+            base + ("." + kind)
+        )
 
         if os.path.exists(src):
             shutil.copy2(src, folder_path)
@@ -220,3 +244,6 @@ for g_id, group in enumerate(groups, start=1):
             print(f"   ⚠️ Missing file: {src}")
 
 print("\n DONE — folders created, files copied, meaningful clustering achieved!")
+
+
+
