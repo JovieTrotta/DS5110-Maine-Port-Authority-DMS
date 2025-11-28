@@ -24,6 +24,17 @@ def get_file_extension(path):
     
     return file_extension
 
+def count_metadata(date_list, date):
+    
+    '''
+    Parameter: a list and a date (as datetime object)
+    Returns: N/A
+
+    Adds the date to the list. This is used to keep track of all the dates our program has extracted form metadata. 
+    '''
+    
+    date_list.append(date)
+
 def safe_date(value):
     
     '''
@@ -67,15 +78,16 @@ def get_pdf_metadata(path):
         reader = PdfReader(path)
         
     except Exception as e:
-        
-        print(f"...ERROR: Could not open PDF — {e}")
-        return
+
+        print(f"...Could not open PDF at {path}")
+        print(f"...ERROR: {e}")
+        return None
 
     metadata = reader.metadata
 
     # no metadata at all
     if not metadata:
-        print("...No metadata found in this PDF!")
+        print(f"...No metadata found at {path}!")
         return None
 
     # first check for the datetime object
@@ -93,7 +105,7 @@ def get_pdf_metadata(path):
     # nothing could be found
     else:
 
-        print("...No date could be found associated with this PDF!")
+        print((f"...No metadata date could be found at {path}!"))
         return None
 
 def get_docx_metadata(path):
@@ -104,9 +116,17 @@ def get_docx_metadata(path):
 
     Takes a DOC's file path as its only parameter, returns the datetime object associated with the file or None.
     '''
-    
-    doc = docx.Document(path)
-    prop = doc.core_properties
+
+    try:
+        
+        doc = docx.Document(path)
+        prop = doc.core_properties
+        
+    except Exception as e:
+
+        print(f"...Could not open DOCX at {path}")
+        print(f"...ERROR: {e}")
+        return None
     
     # first check for the datetime object
     if safe_date(prop.created):
@@ -117,40 +137,86 @@ def get_docx_metadata(path):
     # nothing could be found
     else:
 
-        print("...No date could be found associated with this DOCx!")
+        print((f"...No metadata date could be found at {path}!"))
         return None
 
+def get_log_metadata(path):
+
     '''
-        year = dt_object.year
-        # Extract the month
-        month = dt_object.month
+    Parameter: full file path
+    Returns: a datetime object or None
+
+    Takes a log file path as its only parameter, returns the datetime object associated with the file or None.
     '''
+    try:
+        
+        date = datetime.fromtimestamp(os.path.getctime(path))
+
+        if date:
+
+            print(f"...File Creation Date: {date}")
+            return date
+
+        else:
+
+            print((f"...No metadata date could be found at {path}!"))
+            return None
+
+    except Exception as e:
+        
+        print(f"...Could not open log file at {path}")
+        print(f"...ERROR: {e}")
+        return None
 
 # MAIN
 def main():
 
+    date_list = []
+
     # swap this with our input folder path if we choose that route
     input_directory = sys.argv[1]
 
-    for file in os.listdir(input_directory):
-        path = os.path.join(input_directory, file)
+    for root, dirs, files in os.walk(input_directory):
+        
+        for file in files:
+            
+            path = os.path.join(root, file)
+            ext = get_file_extension(path).lower()
 
-        # skip directories
-        if os.path.isdir(path):
-            continue
+            if ext == ".docx":
+                print(f"\nProcessing DOCX: {path}")
+                date = get_docx_metadata(path)
+                count_metadata(date_list, date)
 
-        ext = get_file_extension(path).lower()
+            elif ext == ".pdf":
+                print(f"\nProcessing PDF: {path}")
+                date = get_pdf_metadata(path)
+                count_metadata(date_list, date)
 
-        if ext == ".docx":
-            print(f"\nProcessing DOCX: {file}")
-            get_docx_metadata(path)
+            elif ext == ".log":
+                print(f"\nProcessing log file: {path}")
+                date = get_log_metadata(path)
+                count_metadata(date_list, date)
 
-        elif ext == ".pdf":
-            print(f"\nProcessing PDF: {file}")
-            get_pdf_metadata(path)
+            else:
+                print(f"\nSkipping unsupported file type: {path}")
+    
+    metadata_found = 0
+    metadata_not_found = 0
 
+    for item in date_list:
+        
+        if item is not None:
+            
+            metadata_found += 1
+            print(item)
+            
         else:
-            print(f"\nSkipping unsupported file type: {file}")
+            
+            metadata_not_found += 1
+            
+    print(metadata_found)
+    print(metadata_not_found)
 
 if __name__ == "__main__":
     main()
