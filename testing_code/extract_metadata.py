@@ -141,12 +141,12 @@ def get_docx_metadata(path):
         return None
 
 # MAIN
-def main():
+def main(input_directory):
 
     date_list = []
 
     # swap this with our input folder path if we choose that route
-    input_directory = sys.argv[1]
+    # input_directory = sys.argv[1]
 
     for root, dirs, files in os.walk(input_directory):
         
