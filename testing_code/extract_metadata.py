@@ -140,34 +140,6 @@ def get_docx_metadata(path):
         print((f"...No metadata date could be found at {path}!"))
         return None
 
-def get_log_metadata(path):
-
-    '''
-    Parameter: full file path
-    Returns: a datetime object or None
-
-    Takes a log file path as its only parameter, returns the datetime object associated with the file or None.
-    '''
-    try:
-        
-        date = datetime.fromtimestamp(os.path.getctime(path))
-
-        if date:
-
-            print(f"...File Creation Date: {date}")
-            return date
-
-        else:
-
-            print((f"...No metadata date could be found at {path}!"))
-            return None
-
-    except Exception as e:
-        
-        print(f"...Could not open log file at {path}")
-        print(f"...ERROR: {e}")
-        return None
-
 # MAIN
 def main():
 
@@ -193,11 +165,6 @@ def main():
                 date = get_pdf_metadata(path)
                 count_metadata(date_list, date)
 
-            elif ext == ".log":
-                print(f"\nProcessing log file: {path}")
-                date = get_log_metadata(path)
-                count_metadata(date_list, date)
-
             else:
                 print(f"\nSkipping unsupported file type: {path}")
     
@@ -209,14 +176,15 @@ def main():
         if item is not None:
             
             metadata_found += 1
-            print(item)
+            # print(item)
             
         else:
             
             metadata_not_found += 1
-            
-    print(metadata_found)
-    print(metadata_not_found)
+
+    print("\nMETADATA SUMMARY: ")
+    print(f"Number of files with embedded metadata - {metadata_found}")
+    print(f"Number of files without embedded metadata - {metadata_not_found}")
 
 if __name__ == "__main__":
     main()
