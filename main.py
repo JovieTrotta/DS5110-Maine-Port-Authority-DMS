@@ -10,12 +10,18 @@ docx_input_dir = "docx_files_up"
 # MAIN
 def main():
 
+    print("...extraction completed")
+
+    print("...running metadata function")
+
     extract_meta_main(pdf_input_dir)
     extract_meta_main(docx_input_dir)
 
+    print("...running title function")
+
     title_files_main(docx_input_dir, pdf_input_dir)
 
-    print("hello world")
+    print("...running folder function")
 
 if __name__ == "__main__":
     main()
