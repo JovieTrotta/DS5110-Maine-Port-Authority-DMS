@@ -13,21 +13,46 @@ This repository contains an automated pipeline developed as a final project for 
 Many documents provided to us were not directly readable by Python because they were scanned PDFs/not text-extractable. As a result, our scripts integrate several text-extraction strategies as necessary. After text extraction, files are renamed, clustered, and reorganized using cosine similarity, and metadata is extracted.
 
 ### 1. Text Extraction (extraction2.py)
-This script handles all text extraction from PDF files, using a two-stage approach:
 
-1. Direct Extraction (pdfplumber): 
-Uses pdfplumber to read text from each page. If pdfplumber successfully extracts at least ~100 characters of text, OCR is skipped. This covers digitally generated PDFs or well-formatted text.
+This script performs all PDF text extraction for the pipeline and was designed to handle the highly mixed document quality of the Maine Port Authority archive. The extraction process uses two stages: a fast direct extraction and a fallback OCR pipeline. 
 
-2. OCR Extraction (Tesseract): 
-If the PDF contains little/no readable text (common for documents for this project), the script converts each page to an image using pdf2image (Poppler backend). It runs Tesseract OCR (pytesseract) on each page, prints progress updates, including page-by-page OCR status, and produces structured text with page markers. Extracted text (from either method) is saved as a .txt file with the same base file name as the original PDF. 
+#### A. Collecting Files From Nested Folders
 
-#### Warning: 
-A few PDFs could not be processed due to corruption or unsupported structures.
-* Executed Sprague Hopper Coop.pdf appears corrupt and cannot be extracted.
-* One additional image-only JPEG was just a picture with no text extractable.
-* Of the remaining 27 PDFs, the script successfully extracted text from 20.
+Before extraction, the script:
+Recursively scans the entire raw_files/ directory
+Copies all .pdf files to pdf_files_up/
 
-Overall, these failures stem from file issues rather than pipeline limitations, and the method should scale well to larger datasets.
+Copies all .docx files to docx_files_up/
+This ensures the program can process deeply nested client folders without manual cleanup. 
+
+#### B. Direct Text Extraction (pdfplumber)
+
+For each PDF:
+
+Attempt to extract text using pdfplumber.
+If the output contains ≥ 100 characters, the script treats the file as a digital PDF.
+The text is saved immediately with no OCR needed.
+This threshold avoids unnecessary OCR for clean, digital documents and significantly speeds up processing. 
+
+#### C. OCR Extraction (Tesseract) for Scanned PDFs
+
+If a PDF contains little or no extractable text:
+
+Convert each page to an image using pdf2image (Poppler backend)
+Run Tesseract OCR (via pytesseract) page by page
+Print detailed progress updates (e.g., “Processing page 3/56…”)
+
+Save extracted text into a .txt file that mirrors the PDF’s original base name
+Example: Lease-2019.pdf → Lease-2019.txt
+
+This consistency is critical for the renaming and cosine similarity grouping steps.  
+
+#### D. Output
+
+All extracted text—whether from pdfplumber or OCR—is saved into:
+ocr_text_output_2/
+
+Each file retains the same base name as its original PDF, ensuring a 1:1 mapping used by the renaming and grouping modules.
 
 ### 2. Metadata Extraction (getimagemetadata.py)
 
