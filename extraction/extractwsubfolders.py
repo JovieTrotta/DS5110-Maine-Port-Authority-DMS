@@ -6,41 +6,77 @@ import pytesseract
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = "/Applications/miniconda3/bin/tesseract"
 
-
 # -------------------------------------------------------
-# NEW STEP 0: COLLECT PDF & DOCX FILES FROM SUBFOLDERS
+# COUNT PDF & DOCX FILES IN ALL SUBFOLDERS
 # -------------------------------------------------------
 
 # This is your messy folder containing many subfolders
-source_root = "raw_files"          # change this to your actual top-level directory
+source_root = "raw_files"
 pdf_input_dir = "pdf_files_up"
 docx_input_dir = "docx_files_up"
 
 os.makedirs(pdf_input_dir, exist_ok=True)
 os.makedirs(docx_input_dir, exist_ok=True)
 
-print("\n📂 Collecting files from subfolders...")
+pdf_count = 0
+docx_count = 0
+
+print("\n📂 Collecting files from subfolders...\n")
+
+def safe_copy(src, dst_dir):
+    """
+    Copies a file without overwriting existing ones.
+    If filename exists, creates filename (1).pdf, (2).pdf, etc.
+    """
+    base = os.path.basename(src)
+    name, ext = os.path.splitext(base)
+    dst = os.path.join(dst_dir, base)
+
+    counter = 1
+    while os.path.exists(dst):
+        dst = os.path.join(dst_dir, f"{name} ({counter}){ext}")
+        counter += 1
+
+    shutil.copy2(src, dst)
+    return dst
+
 
 for root, dirs, files in os.walk(source_root):
+
     for file in files:
         lower = file.lower()
 
-        # Move PDFs
+        # Skip MS Office temp files (corrupt)
+        if lower.startswith("~$"):
+            continue
+
+        full_path = os.path.join(root, file)
+
+        # --- 1. Extract ZIP FILES ---
+        if lower.endswith(".zip"):
+            print(f"📦 Extracting ZIP: {file}")
+            try:
+                with zipfile.ZipFile(full_path, 'r') as z:
+                    z.extractall(root)
+            except Exception as e:
+                print(f"   ⚠️ Could not unzip {file}: {e}")
+            continue
+
+        # --- 2. PDF FILES ---
         if lower.endswith(".pdf"):
-            src = os.path.join(root, file)
-            dst = os.path.join(pdf_input_dir, file)
-            shutil.copy2(src, dst)
+            safe_copy(full_path, pdf_input_dir)
+            pdf_count += 1
             print(f"  ➜ Copied PDF: {file}")
 
-        # Move DOCX
+        # --- 3. DOCX FILES ---
         elif lower.endswith(".docx"):
-            src = os.path.join(root, file)
-            dst = os.path.join(docx_input_dir, file)
-            shutil.copy2(src, dst)
+            safe_copy(full_path, docx_input_dir)
+            docx_count += 1
             print(f"  ➜ Copied DOCX: {file}")
 
-print("✅ All files collected.\n")
-
+print("\n✅ All files collected.")
+print(f"📊 Total PDFs: {pdf_count}")
+print(f"📊 Total DOCX: {docx_count}\n")
 # -------------------------------------------------------
 # STEP 1: YOUR EXISTING PDF → TEXT EXTRACTION PIPELINE
 # -------------------------------------------------------
