@@ -176,9 +176,7 @@ TXT files contain the best extracted text from the PDFs (whether via pdfplumber 
 
 ## Notes & Limitations
 
-A small portion of the PDFs cannot be processed fully, typically because they are corrupted, extremely low-quality scans, or image-only documents containing almost no text. In practice, this is expected when working with large, heterogeneous file collections and does not meaningfully affect the overall clustering results, for the larger sample. Even when OCR succeeds, its output can introduce misread characters, spacing issues, and leftover page markers, which the cleaning portion of the code reduces but cannot eliminate. Some documents may still carry imperfect or incomplete textual representations into the similarity model.
-
-Metadata also provides limited support. Many files lack embedded metadata altogether, and even when present, creation dates or author fields may not correspond to the document’s true origin. This inconsistency makes metadata helpful when available, but unreliable for direct use for grouping or naming.
+A small portion of the PDFs cannot be processed fully, typically because they are corrupted, extremely low-quality scans, or image-only documents containing almost no text. In practice, this is expected when working with large, heterogeneous file collections and does not meaningfully affect the overall clustering results for the larger sample. Even when OCR succeeds, its output can introduce misread characters, spacing issues, and leftover page markers, which the cleaning portion of the code reduces but cannot eliminate. Some documents may still carry imperfect or incomplete textual representations into the similarity model.
 
 Additionally, very long or multi-topic files can have several categories at once, making their similarity scores less decisive. Embedding models capture meaning quite well, but they can still struggle with documents that shift topics or combine unrelated material, occasionally leading to ambiguous or imperfect group assignments.
 
