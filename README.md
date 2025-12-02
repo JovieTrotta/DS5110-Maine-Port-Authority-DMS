@@ -12,7 +12,7 @@ This repository contains an automated pipeline developed as a final project for 
 
 Many documents provided to us were not directly readable by Python because they were scanned PDFs/not text-extractable. As a result, our scripts integrate several text-extraction strategies as necessary. After text extraction, files are renamed, clustered, and reorganized using cosine similarity, and metadata is extracted.
 
-### 1. Text Extraction (extraction2.py)
+### 1. Text Extraction (extractwsubfolders.py)
 
 This script performs all PDF text extraction for the pipeline and was designed to handle the highly mixed document quality of the Maine Port Authority archive. The extraction process uses two stages: a fast direct extraction and a fallback OCR pipeline. 
 
