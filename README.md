@@ -85,48 +85,100 @@ We have three primary types of documents that we will be examining.
 ### 3. File Renaming (filename.py)
 
 ### 4. Document Organization (organizer2.py)
-This script groups documents into meaningful clusters based on semantic similarity using Sentence Transformers.
+This script groups documents into coherent, topic-based clusters using semantic similarity. It operates after text extraction and renaming, relying on cleaned text to determine which documents belong together.
 
-1. Loads document text
-* TXT files (from OCR-processed PDFs)
-* DOCX files (read directly)
-* Skips files where OCR extracted too little text to be usable. (7/27)
+#### A. Loading Document Text
 
-2. Cleans the text
-* Lowercases, removes page markers, strips symbols, and normalizes whitespace.
+The script loads text from all available processed files:
 
-3. Computes embeddings
-* Uses the all-MiniLM-L6-v2 sentence-transformer model.
-* Computes cosine-similarity between all documents.
+* TXT files generated from PDFs (via direct extraction or OCR)
 
-4. Creates initial high-similarity pairs
-* Forms pairs only when similarity ≥ 0.8).
-* Only these “paired” docs become locked into groups.
+* DOCX files using python-docx
 
-5. Iteratively assigns remaining documents
-* In each round, one non-paired file is assigned to the group with the highest mean similarity.
-* Mean similarities with each group are recalculated for the remaining files.
-* Assignment continues until the best remaining similarity falls below 0.2 (which holds for all documents here). 
+* Files are skipped if they contain too little usable text (e.g., scanned maps, images, or extraction failures).
 
-6. Names each group automatically
-* Uses the most frequent long word (length > 5) inside the cluster.
-* Adds the first year detected (if any) from the combined text.
+#### B. Cleaning the Text
 
-7. Copies original documents to the output folders
-* PDF files → from pdf_files/
-* DOCX files → from docx_files/
-* Ensures all groups are saved under organized_folders_final.
+Before computing embeddings, each document’s text is standardized:
 
-#### Why TXT Files Are Used for PDFs: 
-Not all PDFs yielded usable text from OCR, so TXT files (when available) represent the “best possible” extracted text for grouping. DOCX files use their native text. 
+* Lowercasing, removing OCR noise (page markers, stray characters, symbols), and removing punctuation
+
+* Discarding files with fewer than ~20 meaningful words
+
+This ensures that embeddings capture meaningful content rather than noise.
+
+#### C. Embedding & Similarity Computation
+
+The script converts all documents into numerical vectors using "all-MiniLM-L6-v2" (SentenceTransformer).
+
+Then it computes pairwise cosine similarity between all documents.
+Cosine similarity provides a continuous measure of how similar two documents are in meaning.
+
+#### D. Forming High-Confidence Initial Pairs
+
+To identify strong connections early on, the script:
+
+* Finds the strongest match for each document
+
+* Creates a pair only if similarity ≥ 0.8 (can be changed)
+
+* Uses these pairs as seed groups that form the backbone of the final clusters
+
+These initial pairs represent documents that are extremely close in content and, therefore, safe to group immediately.
+
+#### E. Iterative Assignment of Remaining Files
+
+After seed groups are created, the algorithm assigns the rest of the documents, for each ungrouped file:
+
+* Compute its average cosine similarity to each existing group.
+
+* Assign it to the group with the highest mean similarity.
+
+* Repeat until all files are processed.
+
+If a file’s best similarity is below 0.2, a new single-file group is created. This hybrid strategy combines strong early pairs with flexible clustering for weaker matches.
+
+#### F. Automatically Naming Each Group
+
+To give each folder an interpretable name, the script:
+
+* Collects the final filenames inside the group
+
+* Extracts frequent, meaningful keywords (ignoring very short words)
+
+* Picks the most common informative word as the cluster label
+
+* Detects the first year-like pattern (e.g., 2018, 2021) and adds it to the name when present
+
+This produces group names such as:
+
+"Logistics_2019"
+"Contracts_2021"
+"Terminal_20"
+
+#### G. Exporting Final Organized Folders
+
+For every group:
+
+* A new folder is created under organized_folders_final/
+
+* All corresponding PDF and DOCX files are copied into the folder
+
+* Original filenames and extensions are preserved
+
+* TXT files are used only for grouping, not exported
+
+This results in a clean, searchable, topic-based folder system.
+
+### Why TXT Files Are Used for PDFs
+
+TXT files contain the best extracted text from the PDFs (whether via pdfplumber or OCR). Since PDFs vary in structure and quality, TXT files provide a standardized, reliable text format for computing document similarity. DOCX files, on the other hand, supply their own text directly.
 
 ## Notes & Limitations
 
 * A small number of PDFs cannot be processed—acceptable in a larger dataset context.
 * Similarity thresholds may need tuning for different document collections.
     
-
-
 
    
    
