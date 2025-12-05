@@ -89,6 +89,7 @@ We have three primary types of documents that we will be examining.
 This script attempts to find a suitable date and WIN number associated with the documents in a folder and add it to the beginning of the file name.
 It prioritizes leaving document names the same as they are if there is a detectable date already in the title or if no suitable date/WIN number can be found.
 Legacy functionality that attempts to rename the document based on the text in the document is still available by changing the function call found currently on line 282 from
+
         dictionary =generate_title_dictionary_2(path) ----> dictionary =generate_title_dictionary(path)
 
 The main function of the file takes in up to 2 arguments. The first is mandatory, being the file path to a folder that contains .docx and .txt files that should be renamed. The second argument
