@@ -8,6 +8,8 @@ This repository contains an automated pipeline developed as a final project for 
 * Extracts metadata such as creation dates,
 * Outputs a cleaned, organized folder structure suitable for long-term use.
 
+Files used can be accessed here: https://drive.google.com/drive/folders/110S6NpFZ322YgzaI3mQ3imQOysZoCPdF?usp=drive_link
+
 ## Project Overview
 
 Many documents provided to us were not directly readable by Python because they were scanned PDFs/not text-extractable. As a result, our scripts integrate several text-extraction strategies as necessary. After text extraction, files are renamed, clustered, and reorganized using cosine similarity, and metadata is extracted.
