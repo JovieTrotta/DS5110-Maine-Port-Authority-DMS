@@ -84,7 +84,56 @@ We have three primary types of documents that we will be examining.
 
     Text files do not contain metadata.
 
-### 3. File Renaming (filename.py)
+### 3. File Renaming (documenttitling2.py)
+
+This script attempts to find a suitable date and WIN number associated with the documents in a folder and add it to the beginning of the file name.
+It prioritizes leaving document names the same as they are if there is a detectable date already in the title or if no suitable date/WIN number can be found.
+Legacy functionality that attempts to rename the document based on the text in the document is still available by changing the function call found currently on line 282 from
+        dictionary =generate_title_dictionary_2(path) ----> dictionary =generate_title_dictionary(path)
+
+The main function of the file takes in up to 2 arguments. The first is mandatory, being the file path to a folder that contains .docx and .txt files that should be renamed. The second argument
+is optional, and should the file path to any pdf's that had their text extracted from them and placed into .txt files in the first folder. This will allow the program to rename the pdf's as well
+with the same name as their assocated .txt files.
+
+Methods in this script:
+    getText(filename)
+        Extracts text from a .docx with filename as it's file path. Returns list that is the split of the text in the .docx file
+
+    find_dates(list)
+        Given a list that is the split of the text to be analyzed, it will obtain all decipherable month/date pairs that appear with 5 spots in the list from each other. 
+        Creates a dictionary of each decipherable pair and a list of each location of their occurance in the argument list. Sorts this by the size of each list and returns the dictionary
+
+    generate_name(text_entered, freq_dict_entered, bifreq_dict_entered)
+        Legacy function that attempts to create a new name for a document from it's text as a list (text_entered), it's frequency list of that text (freq_dict_entered), and the
+        bifrequency list of that text(bifreq_dict_entered). It analyzes the two frequency lists for matches to generate a seed word. Then creates a title from the 
+        2 words before the seed word and the 10 words after in the text. Will use find_dates to get a date to attach to the title as well. Returns a string name 
+
+    generate_name_2(text_entered, old_name)
+        Function to generate a new name for a document based on the text of the document as a list (text_entered), and the string old_name of the document. First attempts to find any
+        dates already in the document title. If it does, it skips trying to find a date in the document. Otherwise, uses the find_dates method to get a date. Then attempts to find a
+        labeled WIN number in the document. Attempts to rename the document using the WIN number and date if any attached to the start. Returns the new name created
+
+    gen_freq_dicts(text_whole)
+        Function to generate frequency dictionary and bifrequency dictionary from the split list of text in the document. First, pares down the text given to only be alphanumeric. Also excludes words
+        that are under 2 in length and over 14 in an attempt to reduce unreadable words. Then from the text list generates the frequency dictionary and bifrequency dictionary and sorts it based on number
+        of occurances. Returns both dictionaries
+
+    generate_title_dictionary_2(folder_path)
+        Iterates through all files in folder_path and extracts text from them. Uses generate_name_2 to create a new name for the document and stores old_name:new_name in a dictionary. Returns the dictionary at the end
+        
+    generate_title_dictionary(folder_path)
+        Legacy function to generate a dictionary of titles. Iterates through all files in folder_path and extracts text from them. Uses gen_freq_dicts to generate the frequency dictionaries and passes them to
+        generate_name to create new name. Stores each old_name:new_name pair in a dictionary.
+
+    rename_files(title_dictionary, file_path, pdf_file_path)
+        Function that takes in a generated title dictionary, a file_path that is a folder that contains all the .docx/.txt files to be renamed, and pdf_file_path that is the file
+        path to the folder that contains all the pdf files assocated with any .txt files. Pass an empty string for pdf_file_path if there is no such folder. Iterates through the title_dictionary and 
+        renames any relevant files in file_path or pdf_file path with the new names.
+        
+    main(path, pdf_path="")
+        Main function. Pass string path that is the file path to the folder that contains any .docx or .txt files to be renamed. Pass string pdf_path that contains any .pdf files that are associated with .txt files in path.
+        This defaults to the empty string if no such path. Renames any files in path and pdf_path that have dates or WIN numbers found in the text of them that don't already have them in the document title.
+
 
 ### 4. Document Organization (organizer2.py)
 This script groups documents into coherent, topic-based clusters using semantic similarity. It operates after text extraction and renaming, relying on cleaned text to determine which documents belong together.
