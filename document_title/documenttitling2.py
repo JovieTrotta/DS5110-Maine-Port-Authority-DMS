@@ -1,289 +1,193 @@
 # -*- coding: utf-8 -*-
 
-#Chris Kinley
-#11/16
+"""
+Document Titling Script (Updated)
+---------------------------------
+This version:
+ - extracts dates + WIN numbers from document text
+ - prepends them to filenames when appropriate
+ - renames TXT, DOCX, and matching PDFs
+ - returns a count of renamed files for visibility
+"""
+
+import os
+import re
+from docx import Document
 
 
-# main function that generates the title dictionary then renames all the documents (currently does not rename the pdf)
-def main(path, pdf_path=""):
-  from nltk.stem.snowball import SnowballStemmer
-  import re
-  import os
-  from docx import Document
+# ------------------------------------------------------
+# Helper functions
+# ------------------------------------------------------
 
-  # Obtain text from a Docx file. Returns a list of the words in the file
-  def getText(filename):
+def get_text_docx(filename):
+    """Extract raw words from a DOCX file."""
     try:
-      doc = Document(filename)
-      raw = "\n".join(p.text for p in doc.paragraphs)
-      text=raw.split()
-      return text
-    except Exception as e:
-      return []
+        doc = Document(filename)
+        raw = "\n".join(p.text for p in doc.paragraphs)
+        return raw.split()
+    except Exception:
+        return []
 
-  # Finds month names in the a tokenized document and finds the year associated with it. Returns a dictionary of each month/year combo that appears and which spots in the list it appears in
-  def find_dates(list):
+
+def get_text_txt(filename):
+    """Extract raw words from a TXT file."""
+    try:
+        with open(filename, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read().split()
+    except Exception:
+        return []
+
+
+def find_dates(words):
+    """Return dict of month+year mentions in a document."""
+    months = [
+        "january","february","march","april","may","june",
+        "july","august","september","october","november","december"
+    ]
     return_dict = {}
-    months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
-    for i in range(len(list)):
-      for month in months:
-        if month in list[i].lower():
-          for j in range(max(i-4,0),i+5):
-            try:
-              year = int(list[j])
-            except:
-              continue
-            if year>1900 and year<2100:
-              date = month + " " + str(year)
-              if date not in return_dict:
-                return_dict[date] = [i]
-              else:
-                return_dict[date].append(i)
+
+    for i in range(len(words)):
+        for month in months:
+            if month in words[i].lower():
+                for j in range(max(i-4, 0), i+5):
+                    try:
+                        year = int(words[j])
+                    except:
+                        continue
+                    if 1900 < year < 2100:
+                        date = f"{month} {year}"
+                        return_dict.setdefault(date, []).append(i)
+
+    return {k: v for k, v in sorted(return_dict.items(), key=lambda x: x[1], reverse=True)}
 
 
-    return_dict = {k: v for k, v in sorted(return_dict.items(), key=lambda item: item[1], reverse=True)}
-    return return_dict
+def generate_name_metadata(words, old_filename):
+    """Attach month/year and WIN number to filename."""
+    regex_clean = re.compile("[^a-zA-Z0-9]")
+    regex_only_nums = re.compile("[^0-9]")
 
+    # clean first 250 words
+    text = [regex_clean.sub("", w.lower()) for w in words if 0 < len(regex_clean.sub("", w.lower())) < 17]
+    text = text[:250]
 
-  #Tries to find a title "seed" based on the frequency dictionary and bifrequency dictionary.
-  #Then grabs the first instance of this seed word and generates a title based on the surrounding words in the document
-  def generate_name(text_entered, freq_dict_entered, bifreq_dict_entered):
+    # ------ Detect year if already in filename ------
+    already_has_year = any(str(y) in old_filename for y in range(1990, 2035))
 
-    # Obtains a seed and uses not found as a return if no good seed is found
-    freq_dict_hits = list(freq_dict_entered.keys())[0:5]
-    bifreq_dict_hits = list(bifreq_dict_entered.keys())[0:5]
-    for words in bifreq_dict_hits:
-      if bifreq_dict_entered[words]<2:
-        bifreq_dict_hits.remove(words)
-    title_seed=""
-    for hits in freq_dict_hits:
-      for bi_hits in bifreq_dict_hits:
-        if hits in bi_hits:
-          if title_seed == "":
-            title_seed = hits
-    if title_seed == "":
-      return "not found"
-
-    # Generates a title based on the words that occur a little before and a little after the seed word
-    list_splice = []
-    for i in range(len(text_entered)):
-      reduced_word = regex.sub('',text_entered[i].lower())
-      if title_seed in reduced_word:
-        list_splice = text_entered[max(0,i-2):i+12]
-        list_splice = [regex_no_num.sub('',k.lower()) for k in list_splice]
-        break
-    title =  ""
-    for i in list_splice:
-      if i not in stopwords:
-        title = title + i + " "
-
-    # adds the date to the title if one can be found
-    date_list = list(find_dates(text_entered).keys())
-    if(len(date_list)>0):
-      title = title + list(find_dates(text_entered).keys())[0]
-    title = title.title()
-    return title
-
-  # Second iteration of generate name function. Finds a relevant date and WIN number (if there is one) and attaches it to the beginning of the file name
-  def generate_name_2(text_entered, old_name):
-    text = [regex.sub('',words.lower()) for words in text_entered if (len(regex.sub('',words.lower()))>0 and len(regex.sub('',words.lower()))<17)]
-    text = text[0:min(len(text),250)]
-
+    # ------ Detect month/year pairs ------
     date = ""
-    already_date = False
-    # sees if there is a recongizable year in the file name
-    for i in range(1990,2035):
-      if str(i) in old_name:
-        already_date = True
+    if not already_has_year:
+        date_list = list(find_dates(words).keys())
+        if date_list:
+            date = date_list[0].title()
 
-    # finds the most common month/year pair in the first 250 words of the file if there is not already a recongizable year in the file name
-    if not already_date:
-      date_list = list(find_dates(text).keys())
-      if len(date_list)>0:
-        date = date_list[0].title()
-
-    # finds a win number in the document if it is labeled as such
+    # ------ Detect WIN number ------
     win_num = 0
-    win_indices = [i for i,x in enumerate(text) if x=="win"]
-    if(len(win_indices)>0):
-      for index in win_indices:
-        if(win_num>0):
-          break
-        for i in range(3):
-          nums_only = regex_only_num.sub('',text[index+i])
-          if len(nums_only)>6:
-            win_num = int(nums_only)
-            break
+    for i, w in enumerate(text):
+        if w == "win":
+            for offset in range(3):
+                candidate = regex_only_nums.sub("", text[i + offset]) if i + offset < len(text) else ""
+                if len(candidate) > 6:
+                    win_num = int(candidate)
+                    break
 
-    # generates a new name based on what was found earlier in the function
+    # ------ Construct name ------
+    new_name = old_filename
 
-    if(win_num>0 and date != ""):
-      new_name = str(win_num) + " " + date + " " + old_name
-    elif(win_num>0):
-      new_name = str(win_num) + " " + old_name
-    elif(date !=""):
-      new_name = date + " " + old_name
-    else:
-      new_name = old_name
+    if win_num > 0 and date:
+        new_name = f"{win_num} {date} {old_filename}"
+    elif win_num > 0:
+        new_name = f"{win_num} {old_filename}"
+    elif date:
+        new_name = f"{date} {old_filename}"
 
-    return new_name
+    return new_name.strip()
 
 
+# ------------------------------------------------------
+# Build dictionary of new names
+# ------------------------------------------------------
 
+def generate_title_dictionary(folder_path):
+    """Return dict mapping original filenames → new filenames."""
+    title_dict = {}
+    directory = os.listdir(folder_path)
 
+    for filename in directory:
+        full_path = os.path.join(folder_path, filename)
 
+        if filename.lower().endswith(".docx"):
+            words = get_text_docx(full_path)
 
+        elif filename.lower().endswith(".txt"):
+            words = get_text_txt(full_path)
 
-  # Generates a frequency dictionary and a bifrequency dictionary from an input list that represents the tokenized document.
-  #Returns two dictionaries with the word/phrases and how many times they occur in the first 250 decipherable words in the document
-  def gen_freq_dicts(text_whole):
-
-    # Cleans up the text. Also gets rid of empty words and words that are too long to try to filter out when the ocr did a poor job
-    text = [regex_no_num.sub('',words.lower()) for words in text_whole if (len(regex_no_num.sub('',words.lower()))>0 and len(regex_no_num.sub('',words.lower()))<14)]
-    text = text[0:min(len(text),250)]
-
-    # create 1 word frequency dictionary
-    freq_dict ={}
-    for word in text:
-      if word not in stopwords and len(word)>2 and len(word)<14:
-        if word in freq_dict:
-          freq_dict[word]= freq_dict[word]+1
         else:
-          freq_dict[word] = 1
+            continue
 
-    #creating two word frequency dictionary
-    bifreq_dict = {}
-    old_word=""
-    two_word=""
-    for word in text:
-      if word not in stopwords and len(word)>2 and len(word)<14:
-        two_word = old_word + " " + word
-        if two_word in bifreq_dict:
-          bifreq_dict[two_word]= bifreq_dict[two_word]+1
-        else:
-          bifreq_dict[two_word] = 1
-        old_word = word
+        new_name = generate_name_metadata(words, filename)
+        title_dict[filename] = new_name
 
-    # sorts all the frequency dictionaries by frequencies
-    freq_dict = {k: v for k, v in sorted(freq_dict.items(), key=lambda item: item[1], reverse=True)}
-    bifreq_dict = {k: v for k, v in sorted(bifreq_dict.items(), key=lambda item: item[1], reverse=True)}
+    return title_dict
 
 
-    return text,freq_dict, bifreq_dict
+# ------------------------------------------------------
+# Renaming function
+# ------------------------------------------------------
 
-  # Updated function to generate a title dictionary. This method primarily searches the document for relevant win numbers and month/year pairs and adds it to the current title of the document
-  def generate_title_dictionary_2(folder_path):
-    title_dictionary = {}
+def rename_files(title_dict, text_dir, pdf_dir):
+    """Rename TXT/DOCX files and corresponding PDFs."""
+    renamed_count = 0
 
-    # Deals with files being either docx or txt to get one list of words in the document
-    directory = os.fsencode(folder_path)
-    for file in os.listdir(directory):
-      filename = os.fsdecode(file)
-      if filename.endswith(".docx"):
-        text_long=getText(folder_path + "/" + filename)
-      elif filename.endswith(".txt"):
-        with open(folder_path + "/" + filename, "r") as file_text:
-          text_long=file_text.read().split()
-      else:
-        continue
+    # Map PDFs by stem
+    pdf_map = {}
+    if pdf_dir:
+        for f in os.listdir(pdf_dir):
+            if f.lower().endswith(".pdf"):
+                stem = f[:-4]
+                pdf_map[stem] = f
 
-      new_name = generate_name_2(text_long, filename)
+    # Rename TXT/DOCX
+    for old_name, new_name in title_dict.items():
+        old_path = os.path.join(text_dir, old_name)
 
-      title_dictionary[filename] = new_name
-    #print(title_dictionary)
-    return title_dictionary
+        # Preserve file extension
+        ext = ".docx" if old_name.endswith(".docx") else ".txt"
+        if not new_name.endswith(ext):
+            new_name = f"{new_name}{ext}"
 
-  # takes a folder path of .txt and .docx files and generates a dictionary of old titles of files and potential new titles for the files
-  def generate_title_dictionary(folder_path):
+        new_path = os.path.join(text_dir, new_name)
 
-    title_dictionary = {}
+        if old_path != new_path:
+            os.rename(old_path, new_path)
+            renamed_count += 1
 
-    # Deals with files being either docx or txt to get one list of words in the document
-    directory = os.fsencode(folder_path)
-    for file in os.listdir(directory):
-      filename = os.fsdecode(file)
-      if filename.endswith(".docx"):
-        text_long=getText(folder_path + "/" + filename)
-      elif filename.endswith(".txt"):
-        with open(folder_path + "/" + filename, "r") as file_text:
-          text_long=file_text.read().split()
-      else:
-        continue
+    # Rename PDFs with matching text stems
+    for stem, pdf_filename in pdf_map.items():
+        # Does text rename affect this?
+        for old_text_name, new_text_name in title_dict.items():
+            if old_text_name.startswith(stem):
+                new_stem = new_text_name.replace(".txt", "").replace(".docx", "")
+                old_pdf_path = os.path.join(pdf_dir, pdf_filename)
+                new_pdf_path = os.path.join(pdf_dir, f"{new_stem}.pdf")
+                if old_pdf_path != new_pdf_path:
+                    os.rename(old_pdf_path, new_pdf_path)
+                break
 
-      # Generates frequency dictionaries and then uses the generate name method to get a new potential name
-      text_short, freq, bifreq = gen_freq_dicts(text_long)
-      new_name = generate_name(text_short, freq, bifreq)
-
-      # Deals with no good name found, will use original file name
-      if new_name == "not found":
-        title_dictionary[filename] = filename
-      else:
-        title_dictionary[filename] = new_name
-    return title_dictionary
-
-  # Finishes generating the whole file path and renames the files
-  def rename_files(title_dictionary, file_path, pdf_file_path):
-    i=0
-    # Creates a dictionary of pdf files and their new potential name (will be what it already is to begin with)
-    pdf_dict = {}
-    if pdf_file_path != "":
-      directory = os.fsencode(pdf_file_path)
-      for file in os.listdir(directory):
-        filename = os.fsdecode(file)
-        if filename.endswith(".pdf"):
-          filename = filename[:-4]
-          pdf_dict[filename] = filename
-
-    for original_titles in title_dictionary.keys():
-      original_path = file_path + "/" + original_titles
-
-      # If the file is a txt, will maintain the file being a txt with the renaming
-      if original_path.endswith(".txt"):
-        if title_dictionary[original_titles].endswith(".txt"):
-          if original_titles[:-4] in pdf_dict:
-            pdf_dict[original_titles[:-4]] = title_dictionary[original_titles][:-4]
-          new_path = file_path + "/" + title_dictionary[original_titles]
-        else:
-          if original_titles[:-4] in pdf_dict:
-            pdf_dict[original_titles[:-4]] = title_dictionary[original_titles]
-          new_path = file_path + "/" + title_dictionary[original_titles].strip() + ".txt"
+    print(f"✓ {renamed_count} documents renamed")
+    return renamed_count
 
 
+# ------------------------------------------------------
+# MAIN FUNCTION (callable from main.py)
+# ------------------------------------------------------
 
-
-      # if the file is a docx, will maintain that scheme with the renaming
-      elif original_path.endswith(".docx"):
-        if title_dictionary[original_titles].endswith(".docx"):
-          new_path = file_path + "/" + title_dictionary[original_titles]
-        else:
-          new_path = file_path + "/" + title_dictionary[original_titles].strip() + ".docx"
-
-
-      #print(original_path)
-      #print(new_path)
-
-      if(original_path != new_path):
-        i=i+1
-      os.rename(original_path, new_path)
-    print(str(i) + " documents renamed")
-    for pdf_titles in pdf_dict.keys():
-      if pdf_dict[pdf_titles] != pdf_titles:
-        os.rename(pdf_file_path + "/" + pdf_titles + ".pdf",pdf_file_path + "/" + pdf_dict[pdf_titles].strip() + ".pdf")
-
-
-
-  regex = re.compile('[^a-zA-Z0-9]')
-  regex_no_num = re.compile('[^a-zA-Z]')
-  regex_only_num = re.compile('[^0-9]')
-  #stopwords list
-  stopwords = ['', "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now", "shall", "page", "---"]
-
-
-  dictionary =generate_title_dictionary_2(path)
-  rename_files(dictionary, path, pdf_path)
-
-
-if __name__=="__main__":
-  main("/content/data" )
-
+def main(text_directory, pdf_directory=""):
+    """
+    text_directory = folder containing TXT/DOCX extracted files
+    pdf_directory  = folder containing PDFs to rename (optional)
+    """
+    print(f"\n--- Running document titling on: {text_directory} ---")
+    title_dict = generate_title_dictionary(text_directory)
+    rename_files(title_dict, text_directory, pdf_directory)
+    print("--- Titling complete ---\n")
 
