@@ -15,6 +15,9 @@ import re
 from docx import Document
 
 
+text_directory = r"C:\Users\jovie\DS5100\DS5110-Maine-Port-Authority\ocr_text_output_2"
+pdf_directory = r"C:\Users\jovie\DS5100\DS5110-Maine-Port-Authority\pdf_files_up"
+
 # ------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------
@@ -181,6 +184,10 @@ def rename_files(title_dict, text_dir, pdf_dir):
 # MAIN FUNCTION (callable from main.py)
 # ------------------------------------------------------
 
+# ------------------------------------------------------
+# MAIN FUNCTION (callable from main.py)
+# ------------------------------------------------------
+
 def main(text_directory, pdf_directory=""):
     """
     text_directory = folder containing TXT/DOCX extracted files
@@ -190,4 +197,14 @@ def main(text_directory, pdf_directory=""):
     title_dict = generate_title_dictionary(text_directory)
     rename_files(title_dict, text_directory, pdf_directory)
     print("--- Titling complete ---\n")
+
+
+# ------------------------------------------------------
+# RUN DIRECTLY FROM COMMAND LINE
+# ------------------------------------------------------
+
+if __name__ == "__main__":
+    # Uses the directory paths you defined at the top of the script
+    main(text_directory, pdf_directory)
+
 
